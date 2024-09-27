@@ -1,0 +1,29 @@
+# Node modules
+node_modules/
+
+# TypeScript compiled JavaScript files
+dist/
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Environment files
+.env
+
+# Logs
+*.log
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# IDE/editor settings
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+
+# Coverage reports
+coverage/
