@@ -21,6 +21,16 @@ import connectDB from "./utils/connectDb"
 connectDB();
 
 
+import authRoutes from './routes/auth.routes'
+app.use('/auth', authRoutes);
+
+
+import { Request, Response } from "express"
+import { response_500 } from "./utils/responseCodes.utils"
+app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {
+    console.error(err.stack);
+    response_500(res, 'An unexpected error occurred');
+});
 
 
 
