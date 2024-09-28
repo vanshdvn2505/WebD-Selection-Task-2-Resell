@@ -37,6 +37,11 @@ const userSchema = new mongoose.Schema({
     transactonHistory: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'Transactions'
+    },
+
+    likedItems: {
+        type: [String],
+        defalut: []
     }
 })
 

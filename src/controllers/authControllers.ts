@@ -6,8 +6,6 @@ import bcrypt from 'bcrypt'
 import { Request, Response, NextFunction } from "express";
 import { response_200, response_400, response_500 } from "../utils/responseCodes.utils";
 import redisClient from "../utils/redisClient";
-import { log } from "console";
-const router = express.Router();
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/ 
 interface user {
     name: string;
@@ -109,7 +107,7 @@ async function generateToken(res: Response, user: user){
             httpOnly: true,
             secure: true
         });
-        return token
+        return token;
     }
     catch(error){
         console.log(error);
@@ -148,15 +146,17 @@ export const signUp = async (req: Request, res: Response,  next: NextFunction): 
     }
 }
 
-export const SignIn = async (req: Request, res: Response) => {
+export const signIn = async (req: Request, res: Response): Promise<void> => {
     try {
         const {email, password} = req.body;
         if(!email || !password){
-            return response_400(res, 'All Fields Are Required!');
+            response_400(res, 'All Fields Are Required!');
+            return; 
         }
 
         if(!emailRegex.test(email)){
-            return response_400(res, 'Invalid Email');
+            response_400(res, 'Invalid Email');
+            return; 
         }
 
         const emailExists = await User.findOne({email: email});
@@ -166,7 +166,8 @@ export const SignIn = async (req: Request, res: Response) => {
         }
         const userPassword = await bcrypt.compare(password, emailExists.password);  // Compare hashed password
         if(!userPassword){
-            return response_400(res, 'Incorrect Password');
+            response_400(res, 'Incorrect Password');
+            return; 
         }
 
         const user = {
@@ -232,13 +233,14 @@ export const verifyOtp = async (req: Request, res: Response, next: NextFunction)
 }
 
 
-export const signout = async (req: Request, res: Response) => {
+export const signOut = async (req: Request, res: Response): Promise<void> => {
     try {
         const user = req.decoded;
         if (user && typeof user === "object" && "email" in user){
             const userExists = await User.findOne({email: user.email});
             if(!userExists){
-                return response_400(res, 'User Does Not Exists');
+                response_400(res, 'User Does Not Exists');
+                return; 
             }
             res.clearCookie('token',  {
                 httpOnly: true,
