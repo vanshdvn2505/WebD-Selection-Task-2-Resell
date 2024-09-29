@@ -36,16 +36,9 @@ const transactionSchema = new mongoose.Schema({
         enum: ['pending', 'completed', 'cancelled'],
         default: 'pending'
     },
-    
-    createdAt: {
-        type:  Date,
-        default: Date.now
-    },
-
-    updatedAt: {
-        type: Date,
-        default: Date.now
-    }
+},
+{
+    timestamps: true 
 })
 
 

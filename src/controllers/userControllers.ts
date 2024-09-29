@@ -132,6 +132,7 @@ export const addToCart = async (req: Request, res: Response): Promise<void> => {
             else{
                 cart.items.push({product: prodId, quantity})
             }
+            await cart.save();
         }
         else{
             const newCart = new Cart({
@@ -139,9 +140,10 @@ export const addToCart = async (req: Request, res: Response): Promise<void> => {
                 items: [{product: prodId, quantity}]
             })
             await newCart.save();
-            response_200(res, "Added To Cart Successfully");
-            return;
         }
+        await redisClient.del(`cart:${user.id}:items`);
+        response_200(res, "Added To Cart Successfully");
+        return;
 
     }
     catch(error){
@@ -179,6 +181,7 @@ export const updateCart = async (req: Request, res: Response): Promise<void> => 
         }
 
         await cart.save();
+        await redisClient.del(`cart:${user.id}:items`);
         response_200(res, 'Cart Updated Successfully');
         return;
 
@@ -207,13 +210,50 @@ export const removeFromCart = async (req: Request, res: Response): Promise<void>
             return;
         }
 
-        cart.items.filter(i => i.product.toString() !== prodId);
-        await cart.save();
-        response_200(res, "Reoved Successfully");
+        const idx = cart.items.findIndex(i => i.product.toString() === prodId);
+        if(idx > -1){
+            cart.items.splice(idx, 1);
+            await cart.save();
+            response_200(res, "Removed Successfully");
+        }
+        else{
+            response_400(res, "Product Not Found In Cart")
+        }
         return;
     }
     catch(error){
         console.log("Error At Remove From Cart " + error);
+        response_400(res, "Error Occured");
+        return;    
+    }
+}
+
+export const getCart = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const user = req.decoded as DecodedUser;
+        if(!user){
+            response_400(res, "User Not Found");
+            return;
+        }
+        
+        const cache = await redisClient.get(`cart:${user.id}:items`);
+        if(cache){
+            response_200(res, "Cart Items Found", JSON.parse(cache));
+            return;
+        }
+
+        const cartId = await Cart.findOne({buyer: user.id}).populate("items.product");
+        if(!cartId){
+            response_400(res, "Cart Empty");
+            return;
+        }
+        await redisClient.setex(`cart:${user.id}:items`, 1800, JSON.stringify(cartId.items));
+        response_200(res, "Items Found", cartId.items);
+        return;
+        
+    }
+    catch(error){
+        console.log("Error Occured At getCart " + error);
         response_400(res, "Error Occured");
         return;    
     }
@@ -235,8 +275,7 @@ export const reviewProduct = async (req: Request, res: Response): Promise<void> 
             response_400(res, "User Not Found");
         }
 
-        const prod = await Product.findOne({id: id});
-
+        const prod = await Product.findOne({_id: id});
         if(!prod){
             response_400(res, "Product Not Found");
             return;
@@ -290,12 +329,17 @@ export const getReviews = async (req: Request, res: Response): Promise<void> => 
 
 export const searchProducts = async (req: Request, res: Response): Promise<void> => {
     try {
-        const {name, title, category, location, minPrice, maxPrice, page = "1", limit = "10"} = req.params;
+        const {title, description, category, location, minPrice, maxPrice, page = "1", limit = "10"} = req.params;
+
+        if(!title && !description && !category && !location && !minPrice && !maxPrice){
+            response_400(res, "At least one search parameter must be provided.");
+            return;
+        }
 
         const query: any = {};
 
-        if(name){
-            query.name = {$regex: new RegExp(name, 'i')};
+        if(description){
+            query.description = {$regex: new RegExp(description, 'i')};
         }
         
         if(title){
