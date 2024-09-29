@@ -189,3 +189,156 @@ export const updateCart = async (req: Request, res: Response): Promise<void> => 
         return;    
     }
 }
+
+
+export const removeFromCart = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const {prodId} = req.params;
+        const user = req.decoded as DecodedUser;
+
+        if(!user){
+            response_400(res, "User Not Found");
+        }
+
+        const cart = await Cart.findOne({buyer: user.id});
+
+        if(!cart){
+            response_400(res, "Cart Not Found");
+            return;
+        }
+
+        cart.items.filter(i => i.product.toString() !== prodId);
+        await cart.save();
+        response_200(res, "Reoved Successfully");
+        return;
+    }
+    catch(error){
+        console.log("Error At Remove From Cart " + error);
+        response_400(res, "Error Occured");
+        return;    
+    }
+}
+
+export const reviewProduct = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const {id} = req.params;
+        const {text, ratings} = req.body;
+
+        if(!text || !ratings){
+            response_400(res, "Enter All Fields");
+            return;
+        }
+
+        const user = req.decoded as DecodedUser;
+
+        if(!user){
+            response_400(res, "User Not Found");
+        }
+
+        const prod = await Product.findOne({id: id});
+
+        if(!prod){
+            response_400(res, "Product Not Found");
+            return;
+        }
+
+        prod.reviews.push({reviewer: user.id, text, ratings});
+        await redisClient.del(`product:${id}:reviews`);
+        await prod.save();
+        response_200(res, "Reviewed Successfully");
+
+    }
+    catch(error){
+        console.log("Error At Review Product " + error);
+        response_400(res, "Error Occured");
+        return;    
+    }
+}
+
+export const getReviews = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const {id} = req.params;
+
+        const cachedReviews = await redisClient.get(`product:${id}:reviews`);
+
+        if(cachedReviews){
+            response_200(res, "Reviews Found", JSON.parse(cachedReviews));
+            return;
+        }
+
+        const product = await Product.findById(id).populate('reviews.reviewer', 'name email');
+
+        if (!product) {
+            response_400(res, "Product Not Found");
+            return;
+        }
+
+        const reviews = product.reviews;
+
+        await redisClient.set(`product:${id}:reviews`, JSON.stringify(reviews), 'EX', 900);
+
+        response_200(res, "Reviews Found", reviews);
+        return;
+    }
+    catch(error){
+        console.log("Error At Get Reviews " + error);
+        response_400(res, "Error Occurred");
+        return;
+    }
+};
+
+
+export const searchProducts = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const {name, title, category, location, minPrice, maxPrice, page = "1", limit = "10"} = req.params;
+
+        const query: any = {};
+
+        if(name){
+            query.name = {$regex: new RegExp(name, 'i')};
+        }
+        
+        if(title){
+            query.title = {$regex: new RegExp(title, 'i')};
+        }
+       
+        if(category){
+            query.category = {$regex: new RegExp(category, 'i')};
+        }
+
+        if(location){
+            query.location = {$regex: new RegExp(location, 'i')};
+        }
+
+        if(minPrice || maxPrice){
+            query.price = {};
+            if(minPrice){
+                query.price.$gte = parseFloat(minPrice);
+            }
+            if(maxPrice){
+                query.price.$lte = parseFloat(maxPrice);
+            }
+        }
+
+        const skip = (parseInt(page) - 1)*parseInt(limit);
+  
+        const products = await Product.find(query)
+            .skip(skip)
+            .limit(parseInt(limit));
+
+       
+        const totalProducts = await Product.countDocuments(query);
+
+        response_200(res, "Products fetched successfully", {
+            products,
+            totalPages: Math.ceil(totalProducts / parseInt(limit)),
+            currentPage: parseInt(page)
+        });
+        return;
+    }
+    catch(error){
+        console.error("Error in searchProducts:", error);
+        response_400(res, "Error fetching products");
+        return;
+    }
+};
