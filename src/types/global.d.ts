@@ -13,4 +13,5 @@ interface DecodedUser {
     email: string;
     name: string;
     role: string;
+    id: string;
 }

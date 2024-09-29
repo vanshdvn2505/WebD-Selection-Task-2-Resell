@@ -5,6 +5,7 @@ interface DecodedUser {
     email: string;
     name: string;
     role: string;
+    id: string;
 }
 
 const isAuthorised = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
@@ -24,7 +25,7 @@ const isAuthorised = async (req: Request, res: Response, next: NextFunction): Pr
     const authToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : authHeader;
 
     try {
-        const decoded = await new Promise<DecodedUser | JwtPayload | string>((resolve, reject) => {
+        const decoded = await new Promise<DecodedUser  | string>((resolve, reject) => {
             jwt.verify(authToken, jwtKey, (err: Error | null, decoded: JwtPayload | string | undefined) => {
                 if (err || !decoded) {
                     reject(err || new Error("Token decoding failed"));

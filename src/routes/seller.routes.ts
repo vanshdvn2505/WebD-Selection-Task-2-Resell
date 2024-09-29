@@ -1,8 +1,10 @@
 import express from 'express'
 import isAuthorised from '../middlewares/isAuthorised.middleware'
+import { deleteProduct, listProduct, updateProduct } from '../controllers/sellerControllers';
 const router = express.Router();
 
-// router.patch('/updateProfile', isAuthorised, updateProfile);
-// router.post('/likeProduct/:id', isAuthorised, likeProduct);
+router.post('/listProduct', isAuthorised, listProduct);
+router.patch('/updateProduct/:id', isAuthorised, updateProduct);
+router.delete('/deleteProduct', isAuthorised, deleteProduct);
 
 export default router

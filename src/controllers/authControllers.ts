@@ -11,6 +11,7 @@ interface user {
     name: string;
     email: string;
     role: string,
+    id: string
 }
 
 async function validate(username: string, email: string, password: string, res: Response){
@@ -97,6 +98,7 @@ async function generateToken(res: Response, user: user){
                 name: user.name,
                 email: user.email,
                 role: user.role,
+                id: user.id
             },
             jwtKey,
             {
@@ -171,7 +173,7 @@ export const signIn = async (req: Request, res: Response): Promise<void> => {
         }
 
         const user = {
-            id: emailExists.id,
+            id: emailExists._id.toString(),
             name: emailExists.name,
             email: emailExists.email,
             role: emailExists.role,
@@ -207,21 +209,20 @@ export const verifyOtp = async (req: Request, res: Response, next: NextFunction)
             response_400(res, "OTP Deletion Failed");
             return;
         }
-        const dummyUser = {
-            name: data.name,
-            email: data.email,
-            password: data.password,
-            role: data.role
-        }
-        const token = await generateToken(res, dummyUser);
         const newUser = new User({
             name: data.name,
             email: data.email,
             password: data.password,
             role: data.role,
-            token: token
         });
         await newUser.save();
+        const dummyUser = {
+            id: newUser._id.toString(),
+            name: data.name,
+            email: data.email,
+            role: data.role,
+        }
+        const token = await generateToken(res, dummyUser);
         response_200(res, "Registered Successfully");
         return;
     }
