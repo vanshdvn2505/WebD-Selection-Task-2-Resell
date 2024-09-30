@@ -388,63 +388,80 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
     }
 };
 
-// export const checkOut = async (req: Request, res: Response): Promise<void> => {
-//     try {
-//         const user = req.decoded as DecodedUser;
 
-//         if(!user){
-//             response_400(res, "User Not Found");
-//             return;
-//         }
+export const checkOut = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const user = req.decoded as DecodedUser;
 
-//         const {finalItems} = req.body;
+        if(!user){
+            response_400(res, "User Not Found");
+            return;
+        }
 
-//         if(!finalItems || finalItems.length === 0){
-//             response_400(res, "No Items Selected For Checkout");
-//             return;
-//         }
+        const {finalItems} = req.body;
+        if(!finalItems || finalItems.length === 0){
+            response_400(res, "No Items Selected For Checkout");
+            return;
+        }
 
-//         const cart = await Cart.findOne({buyer: user.id}).populate("items.product");
+        const cart = await Cart.findOne({buyer: user.id}).populate("items.product");
 
-//         if(!cart){
-//             response_400(res, "Cart Not Found");
-//             return;
-//         }
+        if(!cart){
+            response_400(res, "Cart Not Found");
+            return;
+        }
 
-//         let totalAmount = 0;
-//         const selectedItems = [];
+        const checkedItems = cart.items.filter(item => finalItems.includes(item.product._id.toString()));
+        console.log(checkedItems)
 
-//         for(const item of finalItems){
-//             const cartItem = cart.items.find(i => i.product._id.toString() === item.product);
+        let totalAmt = 0;
+        checkedItems.forEach(item => {
+            // @ts-ignore
+            totalAmt += item.product.price*item.quantity;
+        })
 
-//             if(!cartItem){
-//                 response_400(res, `Item with ID ${item.product} not found in cart`);
-//                 return;
-//             }
+        const newTransaction = new Transaction({
+            buyer: user.id,
+            productList: checkedItems.map(item => ({
+                product: item.product._id,
+                quantity: item.quantity
+            })),
+            totalAmount: totalAmt,
+            status: "pending"
+        });
 
-//             totalAmount += item.quantity*item.product.price;
-//             selectedItems.push({
-//                 product: cartItem.product.id,
-//                 quantity: item.quantity
-//             });
-//         }
+        await newTransaction.save();
+
+        for(let i = cart.items.length - 1; i >= 0; i--){
+            if(finalItems.includes(cart.items[i].product._id.toString())){
+                cart.items.splice(i, 1);
+            }
+        }
+        await cart.save();
+        response_200(res, "Transaction Successfull");
+        return;
+    }
+    catch(error){
+        console.log("Error At checkOut " + error);
+        response_400(res, "Error Occured");
+        return;    
+    }
+}
 
 
-//         const newTransaction = new Transaction({
-//             buyer: user.id,
-//             seller: [...new Set(selectedItems.map(i => i.product.seller))], 
-//             productList: selectedItems,
-//             totalAmount,
-//             status: 'pending'
-//         });
-//         await newTransaction.save();
+export const getTransactions = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const user = req.decoded as DecodedUser;
+        if(!user){
+            response_400(res, "User Not Found");
+            return;
+        }
 
-//         cart.items = cart.items.filter(i => !selectedItems.some(si => si.product.toString() === i.product.toString()));
-//         await cart.save();
-//     }
-//     catch(error){
-//         console.log("Error At checkOut " + error);
-//         response_400(res, "Error Occured");
-//         return;    
-//     }
-// }
+        const trans = await Transaction.find({buyer : user.id});
+    }
+    catch(error){
+        console.log("Error At getTranactions");
+        response_400(res, "Error Occured");
+        return;    
+    }
+}

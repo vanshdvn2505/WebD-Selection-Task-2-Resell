@@ -5,6 +5,6 @@ const router = express.Router();
 
 router.post('/listProduct', isAuthorised, listProduct);
 router.patch('/updateProduct/:id', isAuthorised, updateProduct);
-router.delete('/deleteProduct', isAuthorised, deleteProduct);
+router.delete('/deleteProduct/:id', isAuthorised, deleteProduct);
 
 export default router

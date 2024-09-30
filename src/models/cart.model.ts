@@ -33,6 +33,11 @@ cartSchema.pre('save', async function (next) {
     const cart = this;
     let total = 0;
 
+    await cart.populate({
+        path: 'items.product',
+        populate: {path: 'seller', model: 'Users'}
+    });
+
     for (const item of cart.items) {
         const product = await mongoose.model('Products').findById(item.product);
         total += product.price * item.quantity;
