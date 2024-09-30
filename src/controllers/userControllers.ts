@@ -6,6 +6,7 @@ import { response_200, response_400, response_500 } from "../utils/responseCodes
 import redisClient from "../utils/redisClient";
 import Cart from "../models/cart.model";
 import { DecodedUser } from "../types/global";
+import Transaction from "../models/transaction.model";
 
 
 export const updateProfile = async (req: Request, res: Response): Promise<void> => {
@@ -386,3 +387,64 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
         return;
     }
 };
+
+// export const checkOut = async (req: Request, res: Response): Promise<void> => {
+//     try {
+//         const user = req.decoded as DecodedUser;
+
+//         if(!user){
+//             response_400(res, "User Not Found");
+//             return;
+//         }
+
+//         const {finalItems} = req.body;
+
+//         if(!finalItems || finalItems.length === 0){
+//             response_400(res, "No Items Selected For Checkout");
+//             return;
+//         }
+
+//         const cart = await Cart.findOne({buyer: user.id}).populate("items.product");
+
+//         if(!cart){
+//             response_400(res, "Cart Not Found");
+//             return;
+//         }
+
+//         let totalAmount = 0;
+//         const selectedItems = [];
+
+//         for(const item of finalItems){
+//             const cartItem = cart.items.find(i => i.product._id.toString() === item.product);
+
+//             if(!cartItem){
+//                 response_400(res, `Item with ID ${item.product} not found in cart`);
+//                 return;
+//             }
+
+//             totalAmount += item.quantity*item.product.price;
+//             selectedItems.push({
+//                 product: cartItem.product.id,
+//                 quantity: item.quantity
+//             });
+//         }
+
+
+//         const newTransaction = new Transaction({
+//             buyer: user.id,
+//             seller: [...new Set(selectedItems.map(i => i.product.seller))], 
+//             productList: selectedItems,
+//             totalAmount,
+//             status: 'pending'
+//         });
+//         await newTransaction.save();
+
+//         cart.items = cart.items.filter(i => !selectedItems.some(si => si.product.toString() === i.product.toString()));
+//         await cart.save();
+//     }
+//     catch(error){
+//         console.log("Error At checkOut " + error);
+//         response_400(res, "Error Occured");
+//         return;    
+//     }
+// }

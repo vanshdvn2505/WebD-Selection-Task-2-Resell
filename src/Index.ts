@@ -2,8 +2,11 @@ import express from "express"
 import dotenv from "dotenv"
 import cookieParser from 'cookie-parser';
 import cors from "cors"
+import { createServer} from "http";
+import chat from "./controllers/chat";
 dotenv.config()
 const PORT = process.env.PORT || 9000
+const CHAT_PORT = process.env.CHAT_PORT || 3000
 
 
 const app = express();
@@ -11,12 +14,18 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({extended: true}))
 app.use(cookieParser());
+app.use(express.static('src'));
 app.use(cors({
     origin: '*',
     methods: ['GET', 'POST', 'OPTIONS', 'PUT'],
     allowedHeaders: ['Content-Type'],
     credentials: true
 }))
+
+// --------------Created A Chat Server----------------
+const httpServer = createServer(app);
+chat(httpServer);
+
 
 // --------------Connect To MongoDB DataBase----------------
 import connectDB from "./utils/connectDb"
@@ -36,18 +45,12 @@ app.use('/seller', sellerRoutes);
 
 
 
-
-
-// import { Request, Response } from "express"
-// import { response_500 } from "./utils/responseCodes.utils"
-// app.use((err: any, req: Request, res: Response, next: express.NextFunction) => {
-//     console.error(err.stack);
-//     response_500(res, 'An unexpected error occurred');
-// });
-
-
 app.get('/', async (req, res) => {
     res.send("Server is running");
+})
+
+httpServer.listen(CHAT_PORT, () => {
+    console.log(`Chat Listening on ${CHAT_PORT}...`)
 })
 
 app.listen(PORT, () => {

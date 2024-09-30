@@ -7,11 +7,11 @@ const transactionSchema = new mongoose.Schema({
         required: true
     },
     
-    seller: {
+    seller: [{
         type: mongoose.Schema.Types.ObjectId,
         ref: "Users",
         required: true
-    },
+    }],
 
     productList: [{
         product: {
