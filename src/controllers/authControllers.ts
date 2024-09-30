@@ -6,6 +6,7 @@ import bcrypt from 'bcrypt'
 import { Request, Response, NextFunction } from "express";
 import { response_200, response_400, response_500 } from "../utils/responseCodes.utils";
 import redisClient from "../utils/redisClient";
+import { subNotifications } from "../services/notify";
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/ 
 interface user {
     name: string;
@@ -179,7 +180,8 @@ export const signIn = async (req: Request, res: Response): Promise<void> => {
             role: emailExists.role,
         }
 
-        const token = await generateToken(res, user); // Generate and set token
+        const token = await generateToken(res, user);
+        subNotifications(user.id);
         response_200(res, "Logged In Successfully")
         return;
     }

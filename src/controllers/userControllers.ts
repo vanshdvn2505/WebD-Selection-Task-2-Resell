@@ -330,54 +330,30 @@ export const getReviews = async (req: Request, res: Response): Promise<void> => 
 
 export const searchProducts = async (req: Request, res: Response): Promise<void> => {
     try {
-        const {title, description, category, location, minPrice, maxPrice, page = "1", limit = "10"} = req.params;
+        const {title, description, category, brand, page = "1", limit = "10"} = req.query;
 
-        if(!title && !description && !category && !location && !minPrice && !maxPrice){
+        if(!title && !description && !category && !brand){
             response_400(res, "At least one search parameter must be provided.");
             return;
         }
-
-        const query: any = {};
-
-        if(description){
-            query.description = {$regex: new RegExp(description, 'i')};
-        }
         
-        if(title){
-            query.title = {$regex: new RegExp(title, 'i')};
-        }
-       
-        if(category){
-            query.category = {$regex: new RegExp(category, 'i')};
-        }
-
-        if(location){
-            query.location = {$regex: new RegExp(location, 'i')};
-        }
-
-        if(minPrice || maxPrice){
-            query.price = {};
-            if(minPrice){
-                query.price.$gte = parseFloat(minPrice);
-            }
-            if(maxPrice){
-                query.price.$lte = parseFloat(maxPrice);
-            }
-        }
-
-        const skip = (parseInt(page) - 1)*parseInt(limit);
-  
-        const products = await Product.find(query)
-            .skip(skip)
-            .limit(parseInt(limit));
-
-       
-        const totalProducts = await Product.countDocuments(query);
+        const lim = parseInt(limit as string) || 10;
+        const pag = (parseInt(page as string) - 1) || 1;
+        const skip = pag*lim;
+        const prods = await Product.find({
+            $or: [
+                {title: {$regex: title, $options: 'i'}},
+                {description: {$regex: description, $options: 'i'}},
+                {category: {$regex: category, $options: 'i'}},
+                {brand: {$regex: brand as string, $options: 'i'}},
+            ]
+        }).skip(skip).limit(lim);
+        const totalProd = prods.length;
 
         response_200(res, "Products fetched successfully", {
-            products,
-            totalPages: Math.ceil(totalProducts / parseInt(limit)),
-            currentPage: parseInt(page)
+            prods,
+            totalPages: Math.ceil(totalProd/lim),
+            currentPage: pag
         });
         return;
     }
@@ -412,7 +388,6 @@ export const checkOut = async (req: Request, res: Response): Promise<void> => {
         }
 
         const checkedItems = cart.items.filter(item => finalItems.includes(item.product._id.toString()));
-        console.log(checkedItems)
 
         let totalAmt = 0;
         checkedItems.forEach(item => {
@@ -457,10 +432,41 @@ export const getTransactions = async (req: Request, res: Response): Promise<void
             return;
         }
 
-        const trans = await Transaction.find({buyer : user.id});
+        const trans = await Transaction.find({buyer : user.id}).populate("productList.product");
+        if(!trans){
+            response_400(res, "No Transactions Found");
+        }
+
+        response_200(res, "Transactions Found", trans);
+        return;
     }
     catch(error){
-        console.log("Error At getTranactions");
+        console.log("Error At getTranactions " + error);
+        response_400(res, "Error Occured");
+        return;    
+    }
+}
+
+export const deleteTransaction = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const {id} = req.params;
+        const user = req.decoded as DecodedUser;
+        if(!user){
+            response_400(res, "User Not Found");
+            return;
+        }
+
+        const trans = await Transaction.findByIdAndDelete(id);
+        if(!trans){
+            response_400(res, "Transaction Not Deleted : Error");
+            return;
+        }
+
+        response_200(res, "Transaction Deleted Successfully");
+        return;
+    }
+    catch(error){
+        console.log("Error At deleteTransaction " + error);
         response_400(res, "Error Occured");
         return;    
     }
