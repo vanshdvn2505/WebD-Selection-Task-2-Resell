@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>One-to-One Chat App</title>
+    <!-- Including Socket.IO library for real-time communication -->
     <script src="http://localhost:5000/socket.io/socket.io.js"></script>
 </head>
 <body>
@@ -23,12 +24,14 @@
     <script>
         const socket = io("http://localhost:5000");
 
+        // Event listener for setting the username
         document.getElementById('setName').onclick = () => {
             const name = document.getElementById('name').value;
             socket.emit('register', name);
             document.getElementById('disconnect').style.display = 'inline';
         };
 
+        // Event listener for sending a message
         document.getElementById('sendMessage').onclick = () => {
             const recipient = document.getElementById('recipient').value;
             const messageData = document.getElementById('messageData');
@@ -37,17 +40,20 @@
             messageData.value = '';
         };
 
+        // Event listener for disconnecting from the server
         document.getElementById('disconnect').onclick = () => {
             socket.disconnect();
             console.log('Disconnected from server');
             document.getElementById('disconnect').style.display = 'none';
         };
 
+        // Event listener for receiving a private message
         socket.on('private_mess', ({ message, sender }) => {
             const mainDiv = document.getElementById('messages');
             mainDiv.innerHTML += `<div><strong>${sender}:</strong> ${message}</div>`;
         });
 
+        // Event listener for receiving message history
         socket.on('history', (messages) => {
             const mainDiv = document.getElementById('messages');   
             messages.forEach(({ sender, message }) => {
@@ -55,6 +61,7 @@
             });
         });
 
+         // Event listener for user disconnection notifications
         socket.on('user_disconnected', ({ name }) => {
             const mainDiv = document.getElementById('messages');
             mainDiv.innerHTML += `<div><em>${name} has disconnected.</em></div>`;

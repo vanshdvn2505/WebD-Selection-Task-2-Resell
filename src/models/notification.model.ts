@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+// Defining the notification schema for MongoDB
 const notificationSchema = new mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
@@ -20,7 +21,7 @@ const notificationSchema = new mongoose.Schema({
     },
 });
 
-
+// Creating the Notification model from the notification schema
 const Notification = mongoose.model("Notifications", notificationSchema);
 
 export default Notification;

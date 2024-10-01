@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+// Defining the transaction schema for MongoDB
 const transactionSchema = new mongoose.Schema({
     buyer: {
         type: mongoose.Schema.Types.ObjectId,
@@ -27,15 +28,15 @@ const transactionSchema = new mongoose.Schema({
 
     status: {
         type: String,
-        enum: ['pending', 'completed', 'cancelled'],
+        enum: ['pending', 'completed', 'cancelled'], // Status can be 'pending', 'completed', or 'cancelled'
         default: 'pending'
     },
 },
 {
-    timestamps: true 
+    timestamps: true  // Automatically create 'createdAt' and 'updatedAt' fields
 })
 
-
+// Creating the Transaction model from the transaction schema
 const Transaction = mongoose.model("Transactions", transactionSchema);
 
 export default Transaction;

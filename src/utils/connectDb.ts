@@ -3,7 +3,7 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
-
+// Setting HTTP and HTTPS proxy environment variables
 process.env.HTTP_PROXY = 'http://IIB2023033:Vansh%402505@172.31.2.3:8080';
 process.env.HTTPS_PROXY = 'http://IIB2023033:Vansh%402505@172.31.2.3:8080';
 
@@ -14,6 +14,7 @@ if (!MONGO_DB_URL) {
     throw new Error("MONGO_DB_URL is not defined in the environment variables.");
 }
 
+// Function to connect to the MongoDB database
 const connectDB = async () => {
     try {
         await mongoose.connect(MONGO_DB_URL);

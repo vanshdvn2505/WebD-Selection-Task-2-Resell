@@ -1,6 +1,8 @@
-import jwt, { JwtPayload } from "jsonwebtoken"; // Import JwtPayload type
+import jwt, { JwtPayload } from "jsonwebtoken";
 import { response_400, response_500 } from "../utils/responseCodes.utils";
 import { Request, Response, NextFunction } from "express";
+
+// Interface representing the decoded user information from the JWT
 interface DecodedUser {
     email: string;
     name: string;
@@ -8,7 +10,9 @@ interface DecodedUser {
     id: string;
 }
 
+// Middleware to check if the user is authorized
 const isAuthorised = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+     // Retrieving the token from cookies or authorization header
     const authHeader = req.cookies?.token || req.headers.authorization;
     
     if (!authHeader) {
@@ -21,7 +25,7 @@ const isAuthorised = async (req: Request, res: Response, next: NextFunction): Pr
         response_500(res, "Internal Server Error");
         return;
     }
-
+    // Extract the token, removing 'Bearer ' prefix if it exists
     const authToken = authHeader.startsWith("Bearer ") ? authHeader.slice(7) : authHeader;
 
     try {
@@ -34,8 +38,8 @@ const isAuthorised = async (req: Request, res: Response, next: NextFunction): Pr
                 }
             });
         });
-
-        req.decoded = decoded as DecodedUser;  // Cast to DecodedUser
+        // Store the decoded user information in the request object
+        req.decoded = decoded as DecodedUser;
         next();
     } catch (error) {
         response_500(res, "Failed To Authenticate", error);

@@ -86,7 +86,9 @@ The platform supports real-time, one-to-one chat between buyers and sellers. Thi
 ###  1. Steps For Setting Up The Server
 - npm i (for installing dependencies)
 - create a .env file and add  all environmental variales listed in .env.sample file
-- node index.js (command for starting the server)
+- in connectDb.ts fill the proxy details if needed
+- npm run build (command for compiling TypeScript to JavaScript)
+- npm run start (command for starting the server)
 
 ### 2. SignUp
 - **Request Body:** <pre>`{

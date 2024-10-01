@@ -8,7 +8,7 @@ import Cart from "../models/cart.model";
 import { DecodedUser } from "../types/global";
 import Transaction from "../models/transaction.model";
 
-
+// Update the user profile
 export const updateProfile = async (req: Request, res: Response): Promise<void> => {
     try {
         const user = req.decoded;
@@ -20,10 +20,12 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
             return;
         }
 
+        // Prepare fields to be updated
         if (name) updateFields.name = name;
         if (location) updateFields.location = location;
         if (contact) updateFields.contact = contact;
 
+         // Update user in the database
         const result = await User.findOneAndUpdate(
             {email: user.email},
             {$set: updateFields},
@@ -46,7 +48,7 @@ export const updateProfile = async (req: Request, res: Response): Promise<void> 
     }
 }
 
-
+// Like or unlike a product
 export const likeProduct = async (req: Request, res: Response): Promise<void> => {
     try {
         const {id} = req.params;
@@ -63,13 +65,15 @@ export const likeProduct = async (req: Request, res: Response): Promise<void> =>
             response_400(res, "User Not Found");
             return;
         }
-
+         // Check if the product is already liked
         const liked = user.likedItems.includes(id);
 
         if(liked){
+            // If liked, remove from liked items
             user.likedItems = user.likedItems.filter(i => i !== id);
         }
         else{
+            // If not liked, add to liked items
             user.likedItems.push(id);
         }
 
@@ -85,17 +89,20 @@ export const likeProduct = async (req: Request, res: Response): Promise<void> =>
     }
 }
 
+// Function to get paginated products
 export const getProducts = async (req: Request, res: Response): Promise<void> => {
     try {
         const {page, limit} = req.params;
         const pageNumber = parseInt(page, 10) || 1;
         const limitNumber = parseInt(limit, 10) || 10;
 
+        // Fetch products from the database with pagination
         const products = await Product.find()
             .populate('seller', 'name email')
             .skip((pageNumber - 1) * limitNumber)
             .limit(limitNumber);
 
+        // Get total product count
         const total = await Product.countDocuments(); 
 
         response_200(res, "Products Found", {
@@ -112,7 +119,7 @@ export const getProducts = async (req: Request, res: Response): Promise<void> =>
     }
 }
 
-
+// Function to add a product to the user's cart
 export const addToCart = async (req: Request, res: Response): Promise<void> => {
     try {
         const {prodId, quantity} = req.body;
@@ -128,20 +135,24 @@ export const addToCart = async (req: Request, res: Response): Promise<void> => {
         if(cart){
             const idx = cart.items.findIndex(i => i.product.toString() === prodId);
             if(idx > -1){
+                // If exists, increase quantity
                 cart.items[idx].quantity += quantity;
             }
             else{
+                // If not exists, add new item
                 cart.items.push({product: prodId, quantity})
             }
             await cart.save();
         }
         else{
+            // Create a new cart if none exists
             const newCart = new Cart({
                 buyer: user.id,
                 items: [{product: prodId, quantity}]
             })
             await newCart.save();
         }
+        // Invalidate cache
         await redisClient.del(`cart:${user.id}:items`);
         response_200(res, "Added To Cart Successfully");
         return;
@@ -154,7 +165,7 @@ export const addToCart = async (req: Request, res: Response): Promise<void> => {
     }
 }
 
-
+// Function to update quantity of a product in the cart
 export const updateCart = async (req: Request, res: Response): Promise<void> => {
     try {
         const {prodId, quantity} = req.body;
@@ -170,7 +181,7 @@ export const updateCart = async (req: Request, res: Response): Promise<void> => 
             response_400(res, "Cart Not Found");
             return;
         }
-
+        // If found, update quantity
         const idx = cart.items.findIndex(i => i.product.toString() === prodId);
 
         if(idx > -1){
@@ -182,6 +193,7 @@ export const updateCart = async (req: Request, res: Response): Promise<void> => 
         }
 
         await cart.save();
+        // Invalidate cache
         await redisClient.del(`cart:${user.id}:items`);
         response_200(res, 'Cart Updated Successfully');
         return;
@@ -194,7 +206,7 @@ export const updateCart = async (req: Request, res: Response): Promise<void> => 
     }
 }
 
-
+// Function to remove a product from the cart
 export const removeFromCart = async (req: Request, res: Response): Promise<void> => {
     try {
         const {prodId} = req.params;
@@ -213,6 +225,7 @@ export const removeFromCart = async (req: Request, res: Response): Promise<void>
 
         const idx = cart.items.findIndex(i => i.product.toString() === prodId);
         if(idx > -1){
+            // If found, remove it from the cart
             cart.items.splice(idx, 1);
             await cart.save();
             response_200(res, "Removed Successfully");
@@ -229,6 +242,7 @@ export const removeFromCart = async (req: Request, res: Response): Promise<void>
     }
 }
 
+// Function to get the current user's cart items
 export const getCart = async (req: Request, res: Response): Promise<void> => {
     try {
         const user = req.decoded as DecodedUser;
@@ -236,18 +250,19 @@ export const getCart = async (req: Request, res: Response): Promise<void> => {
             response_400(res, "User Not Found");
             return;
         }
-        
+         // Check Redis cache for cart items
         const cache = await redisClient.get(`cart:${user.id}:items`);
         if(cache){
             response_200(res, "Cart Items Found", JSON.parse(cache));
             return;
         }
-
+        // Find user's cart and populate product details
         const cartId = await Cart.findOne({buyer: user.id}).populate("items.product");
         if(!cartId){
             response_400(res, "Cart Empty");
             return;
         }
+        // Cache cart items
         await redisClient.setex(`cart:${user.id}:items`, 1800, JSON.stringify(cartId.items));
         response_200(res, "Items Found", cartId.items);
         return;
@@ -260,6 +275,7 @@ export const getCart = async (req: Request, res: Response): Promise<void> => {
     }
 }
 
+// Function to create a new review for a product
 export const reviewProduct = async (req: Request, res: Response): Promise<void> => {
     try {
         const {id} = req.params;
@@ -283,6 +299,7 @@ export const reviewProduct = async (req: Request, res: Response): Promise<void> 
         }
 
         prod.reviews.push({reviewer: user.id, text, ratings});
+        // Invalidate Cache
         await redisClient.del(`product:${id}:reviews`);
         await prod.save();
         response_200(res, "Reviewed Successfully");
@@ -295,6 +312,7 @@ export const reviewProduct = async (req: Request, res: Response): Promise<void> 
     }
 }
 
+// Function to get reviews for a specific product
 export const getReviews = async (req: Request, res: Response): Promise<void> => {
     try {
         const {id} = req.params;
@@ -314,7 +332,7 @@ export const getReviews = async (req: Request, res: Response): Promise<void> => 
         }
 
         const reviews = product.reviews;
-
+        // Cache reviews
         await redisClient.set(`product:${id}:reviews`, JSON.stringify(reviews), 'EX', 900);
 
         response_200(res, "Reviews Found", reviews);
@@ -327,11 +345,12 @@ export const getReviews = async (req: Request, res: Response): Promise<void> => 
     }
 };
 
-
+// Function to search for products based on various criteria
 export const searchProducts = async (req: Request, res: Response): Promise<void> => {
     try {
         const {title, description, category, brand, page = "1", limit = "10"} = req.query;
 
+         // Check if at least one search parameter is provided
         if(!title && !description && !category && !brand){
             response_400(res, "At least one search parameter must be provided.");
             return;
@@ -340,6 +359,7 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
         const lim = parseInt(limit as string) || 10;
         const pag = (parseInt(page as string) - 1) || 1;
         const skip = pag*lim;
+         // Search for products that match any of the provided criteria
         const prods = await Product.find({
             $or: [
                 {title: {$regex: title, $options: 'i'}},
@@ -347,9 +367,10 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
                 {category: {$regex: category, $options: 'i'}},
                 {brand: {$regex: brand as string, $options: 'i'}},
             ]
-        }).skip(skip).limit(lim);
+        }).skip(skip).limit(lim); // Apply pagination
         const totalProd = prods.length;
 
+        // Send success response with found products and pagination information
         response_200(res, "Products fetched successfully", {
             prods,
             totalPages: Math.ceil(totalProd/lim),
@@ -364,7 +385,7 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
     }
 };
 
-
+// Function to checkout and process the user's cart
 export const checkOut = async (req: Request, res: Response): Promise<void> => {
     try {
         const user = req.decoded as DecodedUser;
@@ -394,7 +415,7 @@ export const checkOut = async (req: Request, res: Response): Promise<void> => {
             // @ts-ignore
             totalAmt += item.product.price*item.quantity;
         })
-
+        // Create a new transaction
         const newTransaction = new Transaction({
             buyer: user.id,
             productList: checkedItems.map(item => ({
@@ -406,7 +427,7 @@ export const checkOut = async (req: Request, res: Response): Promise<void> => {
         });
 
         await newTransaction.save();
-
+        // Clear the user's cart after checkout
         for(let i = cart.items.length - 1; i >= 0; i--){
             if(finalItems.includes(cart.items[i].product._id.toString())){
                 cart.items.splice(i, 1);
@@ -423,7 +444,7 @@ export const checkOut = async (req: Request, res: Response): Promise<void> => {
     }
 }
 
-
+// Function to get all transactions for the current user
 export const getTransactions = async (req: Request, res: Response): Promise<void> => {
     try {
         const user = req.decoded as DecodedUser;
@@ -431,7 +452,7 @@ export const getTransactions = async (req: Request, res: Response): Promise<void
             response_400(res, "User Not Found");
             return;
         }
-
+         // Fetch transactions associated with the user's ID and populate product details
         const trans = await Transaction.find({buyer : user.id}).populate("productList.product");
         if(!trans){
             response_400(res, "No Transactions Found");
@@ -447,6 +468,7 @@ export const getTransactions = async (req: Request, res: Response): Promise<void
     }
 }
 
+// Function to delete a specific transaction
 export const deleteTransaction = async (req: Request, res: Response): Promise<void> => {
     try {
         const {id} = req.params;
@@ -456,6 +478,7 @@ export const deleteTransaction = async (req: Request, res: Response): Promise<vo
             return;
         }
 
+        // Find and delete the transaction by its ID
         const trans = await Transaction.findByIdAndDelete(id);
         if(!trans){
             response_400(res, "Transaction Not Deleted : Error");

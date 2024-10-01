@@ -7,7 +7,9 @@ import { Request, Response, NextFunction } from "express";
 import { response_200, response_400, response_500 } from "../utils/responseCodes.utils";
 import redisClient from "../utils/redisClient";
 import { subNotifications } from "../services/notify";
+// Regex pattern for validating emails
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/ 
+
 interface user {
     name: string;
     email: string;
@@ -15,6 +17,7 @@ interface user {
     id: string
 }
 
+// Function to validate input fields for signup
 async function validate(username: string, email: string, password: string, res: Response){
     if(!username || !email || !password){
         response_400(res, 'All fields required')
@@ -37,7 +40,7 @@ async function validate(username: string, email: string, password: string, res: 
     return true;
 }
 
-
+// Function to send email using Nodemailer
 async function sendMail(receiver: nodemailer.SendMailOptions): Promise<SentMessageInfo> {
     const auth = nodemailer.createTransport({
         service: "gmail",
@@ -59,7 +62,7 @@ async function sendMail(receiver: nodemailer.SendMailOptions): Promise<SentMessa
     });
 }
 
-
+// Function to send OTP email and store OTP in Redis
 async function sendEmail(res: Response, email: string): Promise<boolean> {
     const OTP = (Math.floor(Math.random()*9000) + 1000).toString();
     const setOtp = await redisClient.set(`otp:${email}`, OTP, 'EX', 600);
@@ -87,7 +90,7 @@ async function sendEmail(res: Response, email: string): Promise<boolean> {
     }
 }
 
-
+// Function to generate JWT token
 async function generateToken(res: Response, user: user){
     try {
         const jwtKey = process.env.JWT_KEY;
@@ -119,6 +122,7 @@ async function generateToken(res: Response, user: user){
     }
 }
 
+// User signup function
 export const signUp = async (req: Request, res: Response,  next: NextFunction): Promise<void> => {
     try {
         const {name, email, password} = req.body;
@@ -149,6 +153,7 @@ export const signUp = async (req: Request, res: Response,  next: NextFunction): 
     }
 }
 
+// User signin function
 export const signIn = async (req: Request, res: Response): Promise<void> => {
     try {
         const {email, password} = req.body;
@@ -181,7 +186,10 @@ export const signIn = async (req: Request, res: Response): Promise<void> => {
         }
 
         const token = await generateToken(res, user);
+
+        // Subscribe to user notifications
         subNotifications(user.id);
+
         response_200(res, "Logged In Successfully")
         return;
     }
@@ -193,18 +201,22 @@ export const signIn = async (req: Request, res: Response): Promise<void> => {
 }
 
 
+// OTP verification function
 export const verifyOtp = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
         const {otp, data} = req.body;
         if(!data.email || !data.name || !data.password || !data.role){
             response_400(res, "Error Occured");
             return;
-        }
+        }  
+        // Retrieve stored OTP from Redis
         const storedOtp = await redisClient.get(`otp:${data.email}`);
+
         if(!storedOtp || storedOtp !== otp){
             response_400(res, "Invalid OTP");
             return;
         }
+        // Delete the OTP from Redis
         const deleted = await redisClient.del(`otp:${data.email}`);
         if(deleted === 0){
             console.log(`OTP not found for ${data.email}`);
@@ -217,6 +229,7 @@ export const verifyOtp = async (req: Request, res: Response, next: NextFunction)
             password: data.password,
             role: data.role,
         });
+        // Save new user to database
         await newUser.save();
         const dummyUser = {
             id: newUser._id.toString(),
@@ -225,6 +238,10 @@ export const verifyOtp = async (req: Request, res: Response, next: NextFunction)
             role: data.role,
         }
         const token = await generateToken(res, dummyUser);
+
+        // Subscribe to user notifications
+        subNotifications(dummyUser.id);
+
         response_200(res, "Registered Successfully");
         return;
     }
@@ -235,9 +252,10 @@ export const verifyOtp = async (req: Request, res: Response, next: NextFunction)
     }
 }
 
-
+// User sign-out function
 export const signOut = async (req: Request, res: Response): Promise<void> => {
     try {
+        // Retrieve decoded user data from request
         const user = req.decoded;
         if (user && typeof user === "object" && "email" in user){
             const userExists = await User.findOne({email: user.email});

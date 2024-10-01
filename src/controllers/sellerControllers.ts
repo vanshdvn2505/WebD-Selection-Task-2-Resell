@@ -6,6 +6,7 @@ import redisClient from "../utils/redisClient";
 import Product from "../models/product.model";
 import { DecodedUser } from "../types/global";
 import { priceDrop } from "../services/notify";
+// Interface representing a user object
 interface user {
     name: string;
     email: string;
@@ -13,7 +14,7 @@ interface user {
     id: string
 }
 
-
+// Controller to list a new product
 export const listProduct = async (req: Request, res: Response): Promise<void> => {
     try {
         const {title, description, category, price, images, brand} = req.body;
@@ -30,6 +31,7 @@ export const listProduct = async (req: Request, res: Response): Promise<void> =>
             return;
         }
 
+        // Creating a new product instance
         const newProduct = new Product({
             title,
             description,
@@ -40,6 +42,7 @@ export const listProduct = async (req: Request, res: Response): Promise<void> =>
             images: images || []
         })
 
+        // Saving the new product to the database
         await newProduct.save();
 
         response_200(res, "Product Listed Successfully");
@@ -52,7 +55,7 @@ export const listProduct = async (req: Request, res: Response): Promise<void> =>
     }
 }
 
-
+// Controller to update an existing product
 export const updateProduct = async (req:Request, res: Response): Promise<void> => {
     try {
         const {id} = req.params;
@@ -70,12 +73,14 @@ export const updateProduct = async (req:Request, res: Response): Promise<void> =
             return;
         }
         
+         // Check if the user is authorized to update the product
         if(product.seller.toString() !== user.id){
             response_400(res, "You are not authorized to update this product");
             return;
         }
         const prevPrice = product.price;
 
+         // Updating product properties with new values or keeping existing ones
         product.title = title || product.title;
         product.description = description || product.description;
         product.category = category || product.category;
@@ -97,6 +102,7 @@ export const updateProduct = async (req:Request, res: Response): Promise<void> =
     }
 }
 
+// Controller to delete a product
 export const deleteProduct = async (req: Request, res: Response): Promise<void> => {
     try {
         const {id} = req.params;
@@ -114,13 +120,14 @@ export const deleteProduct = async (req: Request, res: Response): Promise<void> 
             return;
         }
 
-        
+        // Check if the user is authorized to delete the product
         if(product.seller.toString() !== user.id){
             response_400(res, "You are not authorized to delete this product");
             return;
         }
-
+        // Deleting the product from the database
         await Product.findByIdAndDelete(id);
+        
         response_200(res, "Product Deleted Successfully");
         return;
     }

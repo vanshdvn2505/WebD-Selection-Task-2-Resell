@@ -3,17 +3,20 @@ import { Redis } from "ioredis";
 import { createAdapter } from 'socket.io-redis';
 import redisClient from "../utils/redisClient";
 
+// Function to store a message in Redis for a user
 const store = async (user: string, message: {sender: string; message: string; timestamp: Date;}) => {
     const key = `chat:${user}`;
     await redisClient.rpush(key, JSON.stringify(message));
 };
 
+// Function to retrieve chat history for a user from Redis
 const history = async (name: string) => {
     const key = `chat:${name}`;
     const messages = await redisClient.lrange(key, 0, -1);
     return messages.map(msg => JSON.parse(msg));
 };
 
+// Main chat function to initialize the Socket.IO server
 const chat = (httpServer: any) => {
 
     const pubClient: Redis = redisClient;
@@ -25,7 +28,7 @@ const chat = (httpServer: any) => {
             credentials: true
         }
     });
-
+    // Using Redis adapter for scaling Socket.IO
     io.adapter(createAdapter({ pubClient, subClient }));
 
     const users: {[key: string]: string} = {};
@@ -33,16 +36,18 @@ const chat = (httpServer: any) => {
     io.on('connection', (socket) => {
         console.log("A user connected : " + socket.id);
 
+        // Handling user registration
         socket.on('register', (name: string) => {
             users[name] = socket.id;
             console.log(`${name} registered ID: ${socket.id}`);
 
+            // Retrieving chat history and sending it to the newly connected user
             history(name).then(messages => {
                 socket.emit('history', messages);
             });
         })
 
-
+         // Handling private messages
         socket.on('private_mess', async ({recipient, message, sender}: {recipient: string, message: string, sender: string}) => {
             const rId = users[recipient];
             const data = {sender, message, timestamp: new Date()};
@@ -52,6 +57,7 @@ const chat = (httpServer: any) => {
             if(rId){
                 socket.to(rId).emit('private_mess', data);
             }
+            // Storing the message in Redis for both sender and recipient
             await store(sender, data);
             await store(recipient, data);
         })

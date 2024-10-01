@@ -6,6 +6,8 @@ import User from "../models/user.model";
 import { Redis } from "ioredis";
 const pub = redisClient.duplicate();
 
+
+// Function to send an email using nodemailer
 async function sendMail(receiver: nodemailer.SendMailOptions): Promise<SentMessageInfo> {
     const auth = nodemailer.createTransport({
         service: "gmail",
@@ -27,6 +29,7 @@ async function sendMail(receiver: nodemailer.SendMailOptions): Promise<SentMessa
     });
 }
 
+// Function to send a notification email to a user
 export const notificationEmail = async (email: string, sub:  string, data: string): Promise<boolean> => {
     const text = `${data}`;
     const subjectOfEmail = sub;
@@ -46,13 +49,13 @@ export const notificationEmail = async (email: string, sub:  string, data: strin
     }
 }
 
+// Function to notify a user with a message
 const notifyUser = async (userId: string, message: string) => {
-    console.log(`Publishing notification for user ${userId}:`, message);
     await Notification.create({user: userId, message});
     pub.publish(`user:${userId}:notifications`, JSON.stringify({message}));
-    console.log(`Done notification for user ${userId}:`, message);
 };
 
+// Function to handle price drop notifications
 export const priceDrop = async (prodId: string, price: number) => {
     const prod = await Product.findById(prodId);
     if(!prod){
@@ -60,6 +63,7 @@ export const priceDrop = async (prodId: string, price: number) => {
     }
     const people = await User.find({likedItems: prodId})
 
+    // Loop through each user to send notifications
     for(const i of people){
         const message = `The Price of ${prod.title} has dropped to ${price}`;
         await notifyUser(i._id.toString(), message);
@@ -67,6 +71,7 @@ export const priceDrop = async (prodId: string, price: number) => {
     }
 }
 
+// Function to subscribe a user to their notification channel
 export const subNotifications = async (userId: string): Promise<void> => {
     const sub = redisClient.duplicate();
     const channel = `user:${userId}:notifications`;
@@ -80,6 +85,7 @@ export const subNotifications = async (userId: string): Promise<void> => {
         }
     })
 
+    // Listener for incoming messages on the subscribed channel
     sub.on('message', (channel, message) => {
         console.log(`Received ${message} from ${channel}`);
     })

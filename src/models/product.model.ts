@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+// Defining the product schema for MongoDB
 const productSchema = new mongoose.Schema({
     title: {
         type: String,
@@ -55,10 +56,10 @@ const productSchema = new mongoose.Schema({
     }],
 },
 {
-    timestamps: true
+    timestamps: true // Automatically create 'createdAt' and 'updatedAt' fields
 })
 
-
+// Creating the Product model from the product schema
 const Product = mongoose.model("Products", productSchema);
 
 export default Product;
