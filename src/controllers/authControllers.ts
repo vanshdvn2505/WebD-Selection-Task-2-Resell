@@ -7,6 +7,7 @@ import { Request, Response, NextFunction } from "express";
 import { response_200, response_400, response_500 } from "../utils/responseCodes.utils";
 import redisClient from "../utils/redisClient";
 import { subNotifications } from "../services/notify";
+import { DecodedUser } from "../types/global";
 // Regex pattern for validating emails
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/ 
 
@@ -281,5 +282,46 @@ export const signOut = async (req: Request, res: Response): Promise<void> => {
         console.log("Error at SignOut " + error);
         response_400(res, "Error occured");    
         return;
+    }
+}
+
+
+export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const user = req.decoded as DecodedUser;
+        if(!user){
+            response_400(res, "User Not Found");
+            return;
+        }
+
+        const {otp, newPassword} = req.body;
+
+        const storedOtp = await redisClient.get(`otp:${user.email}`);
+        if(!storedOtp || storedOtp !== otp){
+            response_400(res, "Invalid OTP");
+            return;
+        }
+        const deleted = await redisClient.del(`otp:${user.email}`);
+        if(deleted === 0){
+            console.log(`OTP not found for ${user.email}`);
+            response_400(res, "OTP Deletion Failed");
+            return;
+        }
+
+        const currUser = await User.findById(user.id);
+        if(!currUser){
+            response_400(res, "User Does Not Exists");
+            return;
+        }
+        const hash = await bcrypt.hash(newPassword, 10);
+        currUser.password = hash;
+        await currUser.save();
+        response_200(res, "Password Changed Successfully");
+        return;
+    }
+    catch(error){
+        console.log("Error at forgotPassword " + error);
+        response_400(res, "Error occured");    
+        return; 
     }
 }

@@ -1,4 +1,3 @@
-import Notification from "../models/notification.model";
 import redisClient from "../utils/redisClient";
 import nodemailer, { SentMessageInfo } from 'nodemailer';
 import Product from "../models/product.model";
@@ -51,7 +50,7 @@ export const notificationEmail = async (email: string, sub:  string, data: strin
 
 // Function to notify a user with a message
 const notifyUser = async (userId: string, message: string) => {
-    await Notification.create({user: userId, message});
+    // await Notification.create({user: userId, message});
     pub.publish(`user:${userId}:notifications`, JSON.stringify({message}));
 };
 

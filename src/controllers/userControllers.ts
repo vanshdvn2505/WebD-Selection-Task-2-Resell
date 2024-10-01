@@ -348,33 +348,52 @@ export const getReviews = async (req: Request, res: Response): Promise<void> => 
 // Function to search for products based on various criteria
 export const searchProducts = async (req: Request, res: Response): Promise<void> => {
     try {
-        const {title, description, category, brand, page = "1", limit = "10"} = req.query;
+        const {title, description, category, brand, page = 1, limit = 10} = req.query;
 
-         // Check if at least one search parameter is provided
-        if(!title && !description && !category && !brand){
-            response_400(res, "At least one search parameter must be provided.");
+        // Build a dynamic query object
+        const query: any = {};
+
+        // If title is provided, use a regular expression for case-insensitive search
+        if(title){
+            query.title = {$regex: new RegExp(title as string, 'i')};
+        }
+
+        // If description is provided, use a regular expression for case-insensitive search
+        if(description){
+            query.description = {$regex: new RegExp(description as string, 'i')};
+        }
+
+        // If category is provided, match exactly (assuming category is an exact match)
+        if(category){
+            query.category = category;
+        }
+
+        if(brand){
+            query.brand = { $regex: new RegExp(brand as string, 'i') };
+        }
+        console.log(query);
+
+        //Pagination Settings
+        const pageNum = Number(page) || 1;
+        const limitNum = Number(limit) || 10;
+        const skip = (pageNum - 1) * limitNum;
+
+        // Search for products that match the query
+        const products = await Product.find(query).skip(skip).limit(limitNum);
+
+        const totalProducts = await Product.countDocuments(query);
+
+        if(!products || products.length === 0){
+            response_400(res, "No products found");
             return;
         }
-        
-        const lim = parseInt(limit as string) || 10;
-        const pag = (parseInt(page as string) - 1) || 1;
-        const skip = pag*lim;
-         // Search for products that match any of the provided criteria
-        const prods = await Product.find({
-            $or: [
-                {title: {$regex: title, $options: 'i'}},
-                {description: {$regex: description, $options: 'i'}},
-                {category: {$regex: category, $options: 'i'}},
-                {brand: {$regex: brand as string, $options: 'i'}},
-            ]
-        }).skip(skip).limit(lim); // Apply pagination
-        const totalProd = prods.length;
 
-        // Send success response with found products and pagination information
+        // Respond with the matching products
         response_200(res, "Products fetched successfully", {
-            prods,
-            totalPages: Math.ceil(totalProd/lim),
-            currentPage: pag
+            products,
+            total: totalProducts,
+            page: pageNum,
+            pages: Math.ceil(totalProducts / limitNum),
         });
         return;
     }

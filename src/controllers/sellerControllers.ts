@@ -137,3 +137,26 @@ export const deleteProduct = async (req: Request, res: Response): Promise<void> 
         return; 
     }
 }
+
+export const getListedProducts = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const user = req.decoded as DecodedUser;
+        if(!user){
+            response_400(res, "User Not Found");
+            return;
+        }
+
+        const prods = await Product.find({seller: user.id});
+        if(!prods){
+            response_400(res, "No Products Found");
+            return;
+        }
+        response_200(res, "Products Found Successfully", prods);
+        return;
+    }
+    catch(error){
+        console.log("Error At getListedProducts " + error);
+        response_400(res, "Error Occured");
+        return;
+    }
+}

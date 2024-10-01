@@ -23,7 +23,7 @@ router.get('/getReview/:id', isAuthorised, getReviews);
 
 router.post('/reviewProduct/:id', isAuthorised, reviewProduct);
 
-router.get('/searchProducts', isAuthorised, searchProducts);
+router.get('/searchProducts', searchProducts);
 
 router.get('/getTransactions', isAuthorised, getTransactions);
 
