@@ -10,7 +10,7 @@ router.post('/addToCart', isAuthorised, addToCart);
 router.patch('/updateCart', isAuthorised, updateCart);
 router.get('/getReview/:id', isAuthorised, getReviews);
 router.post('/reviewProduct/:id', isAuthorised, reviewProduct);
-router.get('/getcart', isAuthorised, getCart);
+router.get('/getCart', isAuthorised, getCart);
 router.delete('/removeFromCart/:prodId', isAuthorised, removeFromCart);
 router.get('/searchProducts', isAuthorised, searchProducts);
 router.post('/checkOut', isAuthorised, checkOut);
