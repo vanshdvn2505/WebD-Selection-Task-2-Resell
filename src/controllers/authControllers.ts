@@ -285,7 +285,50 @@ export const signOut = async (req: Request, res: Response): Promise<void> => {
     }
 }
 
+// Send Otp for forgot password function
+export const sendOtp = async (req: Request, res: Response): Promise<void> => {
+    try {
+        const user = req.decoded as DecodedUser;
+        if(!user){
+            response_400(res, "User Not Found");
+            return;
+        }  
+        const OTP = (Math.floor(Math.random()*9000) + 1000).toString();
+        // Storing OTP in redis
+        const setOtp = await redisClient.set(`passOTP:${user.email}`, OTP, 'EX', 600);
+        if(setOtp !== 'OK'){
+            console.log("Otp Not Stored in Redis");
+            response_500(res, "Internal server Error")
+            return;
+    }
+        const text = `The OTP for forgot password is ${OTP}`;
+        const subjectOfEmail = "Forgot Password";
+        const reciever = {
+            from: process.env.SENDER_EMAIL,
+            to: [user.email],
+            subject: subjectOfEmail,
+            text: text,
+        }
+        try {
+            // Sending Email
+            await sendMail(reciever);
+            response_200(res, "OTP Sent Successfully")
+            return;
+        }
+        catch(error){
+            console.error("Failed to send email:", error);
+            response_500(res, "Failed to send email");
+            return;
+        }
+    }
+    catch(error){
+        console.log("Error At sendOTP " + error);
+        response_400(res, "Error Occured");
+        return;    
+    }
+}
 
+// Forgot Password  Function
 export const forgotPassword = async (req: Request, res: Response): Promise<void> => {
     try {
         const user = req.decoded as DecodedUser;
@@ -296,12 +339,14 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
 
         const {otp, newPassword} = req.body;
 
-        const storedOtp = await redisClient.get(`otp:${user.email}`);
+        // Validating the OTP
+        const storedOtp = await redisClient.get(`passOTP:${user.email}`);
         if(!storedOtp || storedOtp !== otp){
             response_400(res, "Invalid OTP");
             return;
         }
-        const deleted = await redisClient.del(`otp:${user.email}`);
+        // Deleting the OTP from redis server
+        const deleted = await redisClient.del(`passOTP:${user.email}`);
         if(deleted === 0){
             console.log(`OTP not found for ${user.email}`);
             response_400(res, "OTP Deletion Failed");
