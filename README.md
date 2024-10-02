@@ -4,7 +4,7 @@ This project provides the backend for a reselling marketplace where users (buyer
 
 ## 🛠️ Tech Stack
 
-- **Backend Framework:** Express.js
+- **Backend Framework:** Express.js, TypeScript
 - **Database:** MongoDB with Mongoose
 - **Authentication:** JWT-based authentication
 - **Caching and Message Broker:** Redis
@@ -30,7 +30,7 @@ This project provides the backend for a reselling marketplace where users (buyer
 - **Update Profile:** Update the user profile. `PATCH /user/updateProfile`.	
 - **Fetch Products:** Fetch paginated product listings. `GET /user/getProducts/:page/:limit`.
 - **Like Product:** Like or favorite a product. `POST /user/likeProduct/:id`.
-- **Fetch Cart:** Retrieve the user's current cart. `GET 	/user/getCart`.
+- **Fetch Cart:** Retrieve the user's current cart. `GET /user/getCart`.
 - **Add Items To Cart:** Add a product to the shopping cart. `POST /user/addToCart`.
 - **Update Cart:** Update product quantities in the cart. `PATCH /user/updateCart`.
 - **Remove Product From Cart:** Remove a product from the cart. `DELETE /user/removeFromCart/:prodId`.
@@ -42,10 +42,22 @@ This project provides the backend for a reselling marketplace where users (buyer
 
 This project leverages Redis for efficient data management and real-time interactions. Redis is used for:
 
+- **OTP Management:** Redis is utilized to store and manage OTP data. Each OTP is stored for 10 minutes
+for verification and then deleted.
+  
+  - *Key Structure:* `otp:email`
+  - *Value Structure:* A hash containing product IDs, quantities, and other relevant information.
+
 - **Cart Management:** Redis is utilized to store and manage shopping cart data. Each user's cart is maintained in Redis with product information, quantities, and prices. This allows for fast access and updates.
   
   - *Key Structure:* `cart:userId:items` (Each user's cart is a unique key)
   - *Value Structure:* A hash containing product IDs, quantities, and other relevant information.
+
+
+- **Review Management:** Redis is utilized to store and manage reviews of a product. This is stored for 15 minutes so that user can analyze a product with fast access to reviews.
+  
+  - *Key Structure:* `products:id:reviews`
+  - *Value Structure:* A hash containing reviewer IDs, text, and ratings.
 
 ### 5. Reviewing System
 
