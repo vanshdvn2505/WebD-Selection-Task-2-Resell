@@ -2,7 +2,6 @@ import redisClient from "../utils/redisClient";
 import nodemailer, { SentMessageInfo } from 'nodemailer';
 import Product from "../models/product.model";
 import User from "../models/user.model";
-import { Redis } from "ioredis";
 const pub = redisClient.duplicate();
 
 
@@ -50,7 +49,6 @@ export const notificationEmail = async (email: string, sub:  string, data: strin
 
 // Function to notify a user with a message
 const notifyUser = async (userId: string, message: string) => {
-    // await Notification.create({user: userId, message});
     pub.publish(`user:${userId}:notifications`, JSON.stringify({message}));
 };
 
@@ -86,6 +84,6 @@ export const subNotifications = async (userId: string): Promise<void> => {
 
     // Listener for incoming messages on the subscribed channel
     sub.on('message', (channel, message) => {
-        console.log(`Received ${message} from ${channel}`);
+        // console.log(`Received ${message} from ${channel}`);
     })
 };

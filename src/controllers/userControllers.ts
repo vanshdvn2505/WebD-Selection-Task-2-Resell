@@ -348,7 +348,7 @@ export const getReviews = async (req: Request, res: Response): Promise<void> => 
 // Function to search for products based on various criteria
 export const searchProducts = async (req: Request, res: Response): Promise<void> => {
     try {
-        const {title, description, category, brand, page = 1, limit = 10} = req.query;
+        const {title, category, brand, page = 1, limit = 10} = req.query;
 
         // Build a dynamic query object
         const query: any = {};
@@ -358,20 +358,14 @@ export const searchProducts = async (req: Request, res: Response): Promise<void>
             query.title = {$regex: new RegExp(title as string, 'i')};
         }
 
-        // If description is provided, use a regular expression for case-insensitive search
-        if(description){
-            query.description = {$regex: new RegExp(description as string, 'i')};
-        }
-
-        // If category is provided, match exactly (assuming category is an exact match)
+        // If category is provided, match exactly
         if(category){
-            query.category = category;
+            query.category = {$regex: new RegExp(category as string, 'i')}
         }
 
         if(brand){
             query.brand = { $regex: new RegExp(brand as string, 'i') };
         }
-        console.log(query);
 
         //Pagination Settings
         const pageNum = Number(page) || 1;
