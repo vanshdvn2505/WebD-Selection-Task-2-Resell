@@ -2,7 +2,9 @@ import { Server } from "socket.io";
 import { Redis } from "ioredis";
 import { createAdapter } from 'socket.io-redis';
 import redisClient from "../utils/redisClient";
-
+import dotenv from "dotenv"
+dotenv.config()
+const allowedOrigins = ['http://reselliib2023033.vercel.app/']
 // Function to store a message in Redis for a user
 const store = async (user: string, message: {sender: string; message: string; timestamp: Date;}) => {
     const key = `chat:${user}`;
@@ -23,7 +25,7 @@ const chat = (httpServer: any) => {
     const subClient: Redis = redisClient.duplicate();
     const io = new Server(httpServer, {
         cors: {
-            origin: "http://localhost:7000",
+            origin: allowedOrigins,
             methods: ["GET", "POST"],
             credentials: true
         }
