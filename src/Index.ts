@@ -9,7 +9,7 @@ dotenv.config()
 // Define the ports for the server
 const PORT = process.env.PORT || 9000
 const CHAT_PORT = process.env.CHAT_PORT || 3000
-const allowedOrigins = ['http://reselliib2023033.vercel.app/']
+
 
 const app = express();
 // Middleware to parse JSON Bodies-------------------------------------------------
@@ -18,7 +18,7 @@ app.use(express.urlencoded({extended: true}))
 app.use(cookieParser());
 app.use(express.static('src'));
 app.use(cors({
-    origin: allowedOrigins,
+    origin: '*',
     methods: ['GET', 'POST', 'OPTIONS', 'PUT'],
     allowedHeaders: ['Content-Type'],
     credentials: true
